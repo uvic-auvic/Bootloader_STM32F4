@@ -1,6 +1,11 @@
 # Prerequisites
 *.d
 
+# Directories that are not useful but in the project
+Debug/
+Release/
+.settings/
+
 # Object files
 *.o
 *.ko
