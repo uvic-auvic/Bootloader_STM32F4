@@ -18,11 +18,21 @@
 #include "LED.h"
 #include "Command_Handler.h"
 
+#include "stm32f4xx_flash.h"
+
 void debug_task() {
 
-	led_toggle();
+	while((FLASH->SR & FLASH_SR_BSY) == FLASH_SR_BSY);
+	FLASH_Unlock();
+	FLASH_ProgramWord(0x08004000, 0x12345678);
+	FLASH_ProgramWord(0x08004000 + 4, 0x5678);
 
-	vTaskDelay(500);
+	while(1) {
+		led_toggle();
+
+		vTaskDelay(500);
+	}
+
 }
 
 void init_debug_task() {
@@ -39,7 +49,7 @@ int main(void)
 {
 	init_debug_task();
 	init_LED();
-	//init_Command_Handler();
+	init_Command_Handler();
 
 	vTaskStartScheduler();
 

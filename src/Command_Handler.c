@@ -12,8 +12,12 @@
 
 static void Command_Handler() {
 
+	while(1) {
 
-	vTaskDelay(500);
+		UART_push_out_debug("h");
+		vTaskDelay(500);
+	}
+
 }
 
 extern void init_Command_Handler() {

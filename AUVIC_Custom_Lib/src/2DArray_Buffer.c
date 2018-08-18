@@ -1,6 +1,12 @@
-/*Buffer - Circular FIFO Buffer implementation*/
+/*
+ * 2DArray_Buffer.c
+ *
+ *  Created on: Aug 13, 2018
+ *      Author: Poornachander
+ */
 
-#include "Buffer.h"
+
+#include "2DArray_Buffer.h"
 #include <stdlib.h>
 
 // Adds an element to the end of the queue
@@ -59,3 +65,4 @@ extern int Buffer_size(Buffer_t* b){
 extern int Buffer_overflow(Buffer_t* b){
 	return b->overflow_cnt;
 }
+

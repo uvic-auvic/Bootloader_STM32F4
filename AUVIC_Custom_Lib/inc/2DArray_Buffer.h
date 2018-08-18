@@ -1,5 +1,12 @@
-#ifndef BUFFER_H_
-#define BUFFER_H_
+/*
+ * 2DArray_Buffer.h
+ *
+ *  Created on: Aug 13, 2018
+ *      Author: Poornachander
+ */
+
+#ifndef INC_2DARRAY_BUFFER_H_
+#define INC_2DARRAY_BUFFER_H_
 
 #include<string.h>
 #include "stm32f4xx.h"
@@ -26,4 +33,5 @@ extern void Buffer_init();
 
 //-----------------------------------------------
 
-#endif
+
+#endif /* INC_2DARRAY_BUFFER_H_ */

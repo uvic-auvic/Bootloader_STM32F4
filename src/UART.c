@@ -12,6 +12,7 @@
 #include "task.h"
 
 #include "LED.h"
+#include "2DArray_Buffer.h"
 
 //Register bit for enabling TXEIE bit. This is used instead of the definitions in stm32f4xx_usart.h
 #define USART_TXEIE	0b10000000
@@ -103,20 +104,37 @@ extern void deinit_UART() {
 /***************************************************************
  * INTERFACE FUNCTIONS
  ***************************************************************/
-extern int UART_push_out(char * message) {
-
-}
-
 extern int UART_push_out_len(char * message , uint8_t length) {
 
 }
+
+extern int UART_push_out(char * message) {
+
+	UART_push_out_len(message, strlen(message));
+}
+
+extern int UART_push_out_len_debug(char * message, uint8_t length) {
+	for(uint8_t i = 0; i < length; i++) {
+		while(!(UART-> SR & USART_SR_TXE)) {
+			UART->DR = message[i];
+		}
+	}
+}
+
+extern int UART_push_out_debug(char * message) {
+	UART_push_out_len_debug(message, strlen(message));
+}
+
+
 
 /***************************************************************
  * INTERRUPT HANDLERS
  ***************************************************************/
 
 static inline void UART_IRQHandler() {
-	led_toggle();
+	GPIOD->ODR ^= GPIO_Pin_14;
+
+	uint32_t temp = UART->DR;
 }
 
 void USART1_IRQHandler() {

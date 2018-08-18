@@ -13,4 +13,11 @@ extern void deinit_UART();
 extern int UART_push_out(char * message);
 extern int UART_push_out_len(char * message , uint8_t length);
 
+#ifdef DEBUG
+
+extern int UART_push_out_len_debug(char * message, uint8_t length);
+extern int UART_push_out_debug(char * message);
+
+#endif
+
 #endif /* UART_H_ */
