@@ -7,7 +7,7 @@
 **
 **  Abstract    : Linker script for STM32F411VETx Device from STM32F4 series
 **                128Kbytes RAM
-**                512Kbytes ROM
+**                512Kbytes BOOTLOADER
 **
 **                Set heap size, stack size and stack location according
 **                to application requirements.
@@ -61,22 +61,32 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Memories definition */
 MEMORY
 {
-  RAM (xrw)		: ORIGIN = 0x20000000, LENGTH = 128K
-  ROM (rx)		: ORIGIN = 0x8008000, LENGTH = 480K
+  RAM (xrw)			: ORIGIN = 0x20000000, LENGTH = 128K
+  BOOTLOADER (rx)	: ORIGIN = 0x08000000, LENGTH = 0x7F00
+  CONFIG (rx)		: ORIGIN = 0x08007F00, LENGTH = 0x100
 }
 
 /* Sections */
 SECTIONS
 {
-  /* The startup code into ROM memory */
+  /* Non-volatile storage */
+  .config :
+  {
+    . = ALIGN(4);
+    KEEP(*(.config)) /* Startup code */
+    . = ALIGN(4);
+  } >CONFIG
+	
+	
+  /* The startup code into BOOTLOADER memory */
   .isr_vector :
   {
     . = ALIGN(4);
     KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
-  } >ROM
+  } >BOOTLOADER
 
-  /* The program code and other data into ROM memory */
+  /* The program code and other data into BOOTLOADER memory */
   .text :
   {
     . = ALIGN(4);
@@ -91,22 +101,22 @@ SECTIONS
 
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
-  } >ROM
+  } >BOOTLOADER
 
-  /* Constant data into ROM memory*/
+  /* Constant data into BOOTLOADER memory*/
   .rodata :
   {
     . = ALIGN(4);
     *(.rodata)         /* .rodata sections (constants, strings, etc.) */
     *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
     . = ALIGN(4);
-  } >ROM
+  } >BOOTLOADER
 
   .ARM.extab   : { 
   	. = ALIGN(4);
   	*(.ARM.extab* .gnu.linkonce.armextab.*)
   	. = ALIGN(4);
-  } >ROM
+  } >BOOTLOADER
   
   .ARM : {
     . = ALIGN(4);
@@ -114,7 +124,7 @@ SECTIONS
     *(.ARM.exidx*)
     __exidx_end = .;
     . = ALIGN(4);
-  } >ROM
+  } >BOOTLOADER
 
   .preinit_array     :
   {
@@ -123,7 +133,7 @@ SECTIONS
     KEEP (*(.preinit_array*))
     PROVIDE_HIDDEN (__preinit_array_end = .);
     . = ALIGN(4);
-  } >ROM
+  } >BOOTLOADER
   
   .init_array :
   {
@@ -133,7 +143,7 @@ SECTIONS
     KEEP (*(.init_array*))
     PROVIDE_HIDDEN (__init_array_end = .);
     . = ALIGN(4);
-  } >ROM
+  } >BOOTLOADER
   
   .fini_array :
   {
@@ -143,7 +153,7 @@ SECTIONS
     KEEP (*(.fini_array*))
     PROVIDE_HIDDEN (__fini_array_end = .);
     . = ALIGN(4);
-  } >ROM
+  } >BOOTLOADER
 
   /* Used by the startup to initialize data */
   _sidata = LOADADDR(.data);
@@ -158,7 +168,7 @@ SECTIONS
 
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
-  } >RAM AT> ROM
+  } >RAM AT> BOOTLOADER
 
   
   /* Uninitialized data section into RAM memory */
