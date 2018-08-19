@@ -1,0 +1,13 @@
+REG NAME: STATUS
+	SIZE: 4 btes (32 bits)
+	
+	BIT 0: STATUS_RAP
+		Set high after programming is finished. Bootloader app should
+		read this bit on start up to determine if Application should be
+		started or Bootloader should be started
+		
+REG NAME: DEVICEID
+	SIZE: 64 bytes (256 bits)
+	
+	BIT [256:0]: Device ID in ASCII. Should be same as RID. Used to 
+		determine if correct firmware is being loaded.

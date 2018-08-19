@@ -1,7 +1,0 @@
-
-UART Protocol for sending binary flash data:
-
-BYTE 0			: 1 BYTE	: Packet ID      
-BYTE [1:3]		: 3 BYTES	: Size of data
-BYTE [4:4099]	: 4096 BYTES: Data
-BYTE [4100:4103]: 4 BYTES	: CRC
