@@ -13,6 +13,7 @@
 
 #include "LED.h"
 #include "2DArray_Buffer.h"
+#include "Command_Handler.h"
 
 //Register bit for enabling TXEIE bit. This is used instead of the definitions in stm32f4xx_usart.h
 #define USART_TXEIE	0b10000000
@@ -25,6 +26,11 @@
 #define UART_RX_PIN		(GPIO_Pin_7)
 
 #define BAUD_RATE	(9600)
+
+// Receive buffer for UART, no DMA
+char inputString[BUFFER_DATA_LENGTH]; //string to store individual bytes as they are sent
+uint8_t inputStringIndex = 0;
+_2DArray_Buffer_t inputBuffer = {};
 
 /***************************************************************
  * INITIALIZATION FUNCTIONS
@@ -88,13 +94,20 @@ static void init_UART_periph() {
 
 	// finally this enables the complete USART1 peripheral
 	USART_Cmd(UART, ENABLE);
+}
+
+
+static void init_UART_DMA() {
 
 }
 
-extern void init_UART(TaskHandle_t xHandle) {
+extern void init_UART() {
 
 	init_UART_GPIO();
 	init_UART_periph();
+	init_UART_DMA();
+
+
 }
 
 extern void deinit_UART() {
@@ -125,16 +138,37 @@ extern int UART_push_out_debug(char * message) {
 	UART_push_out_len_debug(message, strlen(message));
 }
 
-
-
 /***************************************************************
  * INTERRUPT HANDLERS
  ***************************************************************/
 
 static inline void UART_IRQHandler() {
-	GPIOD->ODR ^= GPIO_Pin_14;
+	if((UART->SR & USART_FLAG_RXNE) == USART_FLAG_RXNE) { //If character is received
 
-	uint32_t temp = UART->DR;
+		char tempInput[1];
+		tempInput[0] = UART->DR;
+
+		//Check for new line character which indicates end of command
+		if (tempInput[0] == '\n' || tempInput[0] == '\r') {
+
+			if(strlen(inputString) > 0) {
+				Buffer_add(&inputBuffer, inputString, BUFFER_DATA_LENGTH);
+				memset(inputString, 0, BUFFER_DATA_LENGTH);
+				inputStringIndex = 0;
+
+				BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+				vTaskNotifyGiveFromISR(Command_Handler_Task_Handle, &xHigherPriorityTaskWoken);
+			}
+
+		} else {
+			inputString[inputStringIndex] = tempInput[0];
+			inputStringIndex = (inputStringIndex + 1) % BUFFER_DATA_LENGTH;
+		}
+
+	} else if ((UART->SR & USART_FLAG_TXE) == USART_FLAG_TXE) { // If Transmission is complete
+
+
+	}
 }
 
 void USART1_IRQHandler() {

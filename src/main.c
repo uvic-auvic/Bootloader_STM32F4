@@ -19,23 +19,16 @@
 #include "Command_Handler.h"
 
 #include "stm32f4xx_flash.h"
+#include "User_Defines.h"
+#include "Flash_Interface.h"
 
-#define APP_START_ADDRESS 0x08008000
 
-typedef void (*pFunction)(void);
+
 
 void debug_task() {
 
-	while((FLASH->SR & FLASH_SR_BSY) == FLASH_SR_BSY);
-	FLASH_Unlock();
-	FLASH_ProgramWord(0x08004000, 0x12345678);
-	FLASH_ProgramWord(0x08004000 + 4, 0x5678);
+	init_flash();
 
-	while(1) {
-		led_toggle();
-
-		vTaskDelay(500);
-	}
 
 }
 
@@ -49,27 +42,17 @@ void init_debug_task() {
 		NULL              ); // pvCreatedTask */
 }
 
+
+
 int main(void)
 {
 
+	debug_task();
 
-	pFunction appEntry;
-	uint32_t appStack;
+	init_LED();
+	Bootloader_Start();
 
-	/* Get the application stack pointer (First entry in the application vector table) */
-	appStack = (uint32_t) *((__IO uint32_t*)APP_START_ADDRESS);
 
-	/* Get the application entry point (Second entry in the application vector table) */
-	appEntry = (pFunction) *(__IO uint32_t*) (APP_START_ADDRESS + 4);
-
-	/* Reconfigure vector table offset register to match the application location */
-	SCB->VTOR = APP_START_ADDRESS;
-
-	/* Set the application stack pointer */
-	__set_MSP(appStack);
-
-	/* Start the application */
-	appEntry();
 
 
 

@@ -8,6 +8,8 @@
 #ifndef COMMAND_HANDLER_H_
 #define COMMAND_HANDLER_H_
 
-extern void init_Command_Handler();
+extern TaskHandle_t Command_Handler_Task_Handle;
+
+extern void Command_Handler();
 
 #endif /* COMMAND_HANDLER_H_ */
