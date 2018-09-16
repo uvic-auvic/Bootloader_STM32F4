@@ -139,11 +139,7 @@ extern void Bootloader_Start() {
 
 	init_Bootloader();
 
-	UART_push_out_len_debug("HELLO", 5);
-
 	vTaskStartScheduler();
-
-
 
 	//Should never reach this
 	while(1);

@@ -52,10 +52,6 @@ int main(void)
 	init_LED();
 	Bootloader_Start();
 
-
-
-
-
 //	init_LED();
 //	init_debug_task();
 //	init_Command_Handler();

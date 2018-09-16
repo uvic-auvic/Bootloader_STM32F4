@@ -41,6 +41,11 @@ char inputString[BUFFER_DATA_LENGTH]; //string to store individual bytes as they
 uint8_t inputStringIndex = 0;
 _2DArray_Buffer_t inputBuffer = {};
 
+// Transmit buffer for UART, no DMA
+#define OUTPUT_BUFFER_SIZE_BYTES	64
+char outputBuffer[OUTPUT_BUFFER_SIZE_BYTES];
+uint8_t outputBufferIndexHead = 0, outputBufferIndexTail = 0;
+
 /***************************************************************
  * INITIALIZATION FUNCTIONS
  ***************************************************************/
@@ -71,19 +76,19 @@ static void init_UART_GPIO() {
 }
 
 static void init_UART_periph() {
-	uint32_t interrupt_type = 0;
+	uint32_t interrupt_number = 0;
 	if (UART == USART1) {
 
 		RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
-		interrupt_type = USART1_IRQn;
+		interrupt_number = USART1_IRQn;
 	} else if (UART == USART6) {
 
 		RCC->APB2ENR |= RCC_APB2ENR_USART6EN;
-		interrupt_type = USART6_IRQn;
+		interrupt_number = USART6_IRQn;
 	} else if (UART == USART2) {
 
 		RCC->APB2ENR |= RCC_APB1ENR_USART2EN;
-		interrupt_type = USART2_IRQn;
+		interrupt_number = USART2_IRQn;
 	}
 
 	USART_InitTypeDef USART_InitStruct; // this is for the USART1 initialization
@@ -98,16 +103,10 @@ static void init_UART_periph() {
 
 	UART->CR1 |= USART_RXNEIE; //Enable the USART1 receive interrupt
 
-//	NVIC_SetPriority(USART1_IRQn, 7);
-//	NVIC_EnableIRQ(USART1_IRQn);
-
 	NVIC_InitTypeDef NVIC_InitStruct;
 
-//	NVIC_InitStruct.NVIC_IRQChannel = USART1_IRQn;
-//	NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
-//	NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0;
-//	NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0;
-//	NVIC_Init(&NVIC_InitStruct);
+	NVIC_SetPriority(interrupt_number, 7);
+	NVIC_EnableIRQ(interrupt_number);
 
 	// finally this enables the complete USART1 peripheral
 	USART_Cmd(UART, ENABLE);
@@ -134,13 +133,46 @@ extern void deinit_UART() {
 /***************************************************************
  * INTERFACE FUNCTIONS
  ***************************************************************/
-extern int UART_push_out_len(char * message , uint8_t length) {
+/*
+ * ERROR CODE:
+ * -1 = String length is not 1 or greater
+ * -2 = OutputBuffer will overflow. Wait some time and retry
+ * 1  = Added to buffer successfully
+ */
+extern int UART_push_out(char* mesg) {
 
+	 return UART_push_out_len(mesg, strlen(mesg));
 }
 
-extern int UART_push_out(char * message) {
+/*
+ * ERROR CODE:
+ * -1 = String length is not 1 or greater
+ * -2 = OutputBuffer will overflow. Wait some time and retry
+ * 1  = Added to buffer successfully
+ */
+extern int UART_push_out_len(char* mesg, int len) {
 
-	UART_push_out_len(message, strlen(message));
+	if(len < 1) {
+		return -1;
+	}
+
+	int diff = outputBufferIndexTail - outputBufferIndexHead;
+
+	if(diff <= 0) {
+		diff += OUTPUT_BUFFER_SIZE_BYTES;
+	}
+	if(len > (diff - 1)) { //Has to be diff - 1. Cannot write to position pointed to by outputBufferIndexTail.
+		return -2;
+	}
+
+	for (int i = 0; i < len; i++) {
+		outputBuffer[outputBufferIndexHead] = mesg[i];
+		outputBufferIndexHead = (outputBufferIndexHead + 1) & 63;
+	}
+
+	USART1->CR1 |= USART_TXEIE;
+	return 1;
+
 }
 
 extern int UART_push_out_len_debug(char * message, uint8_t length) {
@@ -184,6 +216,12 @@ static inline void UART_IRQHandler() {
 
 	} else if ((UART->SR & USART_FLAG_TXE) == USART_FLAG_TXE) { // If Transmission is complete
 
+		if ((outputBufferIndexHead - outputBufferIndexTail) != 0) {
+			UART->DR = outputBuffer[outputBufferIndexTail];
+			outputBufferIndexTail = (outputBufferIndexTail + 1) & 63;
+		} else {
+			UART->CR1 &= ~USART_TXEIE;
+		}
 
 	}
 }

@@ -173,8 +173,14 @@
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 		<project id="Bootloader_STM32F4.fr.ac6.managedbuild.target.gnu.cross.exe.154454490" name="Executable" projectType="fr.ac6.managedbuild.target.gnu.cross.exe"/>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope"/>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="com.atollic.truestudio.exe.debug.966994508;com.atollic.truestudio.exe.debug.966994508.;com.atollic.truestudio.exe.debug.toolchain.gcc.1479007741;com.atollic.truestudio.gcc.input.487575817">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.atollic.truestudio.mbs.ARMToolsPerProjectProfileC"/>
+		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="fr.ac6.managedbuild.config.gnu.cross.exe.debug.266967989;fr.ac6.managedbuild.config.gnu.cross.exe.debug.266967989.;fr.ac6.managedbuild.tool.gnu.cross.c.compiler.1240311319;fr.ac6.managedbuild.tool.gnu.cross.c.compiler.input.c.1371532268">
 			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
@@ -182,7 +188,4 @@
 			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 	</storageModule>
-	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
-	<storageModule moduleId="refreshScope"/>
-	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>
