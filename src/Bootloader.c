@@ -20,7 +20,7 @@
 
 /* DEBUG DEFINES */
 #define FORCE_LOAD_APP	0
-#define FORCE_LOAD_BOOTLOADER	0 //Overrides FORCE_LOAD_APP
+#define FORCE_LOAD_BOOTLOADER	1 //Overrides FORCE_LOAD_APP
 
 /* BOOTLOADER DEFINES */
 #define START_COMMAND_WAIT_MS	(2000)
@@ -103,6 +103,7 @@ static void Bootloader_Main_task() {
 	while(1) {
 
 		led_toggle(LED2);
+		//UART_push_out_len_debug("h", 1);
 		vTaskDelay(pdMS_TO_TICKS(500));
 
 	}
@@ -138,6 +139,13 @@ extern void Bootloader_Start() {
 
 	init_Bootloader();
 
+	UART_push_out_len_debug("HELLO", 5);
+
 	vTaskStartScheduler();
+
+
+
+	//Should never reach this
+	while(1);
 
 }

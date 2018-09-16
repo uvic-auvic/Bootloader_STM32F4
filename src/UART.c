@@ -15,17 +15,26 @@
 #include "2DArray_Buffer.h"
 #include "Command_Handler.h"
 
-//Register bit for enabling TXEIE bit. This is used instead of the definitions in stm32f4xx_usart.h
-#define USART_TXEIE	0b10000000
-#define USART_RXEIE	0b100000
-
-#define UART_TO_USE	(USART1)
-#define UART (UART_TO_USE)
-#define UART_GPIO_PORT	(GPIOB)
-#define UART_TX_PIN		(GPIO_Pin_6)
-#define UART_RX_PIN		(GPIO_Pin_7)
-
+/***************************************************************
+ * USER CONFIGURABLE DEFINES
+ ***************************************************************/
+#define UART_TO_USE			(USART1) //Example: USART1 or USART2. Has to match define from ST Library
+#define GPIO_PORT_TO_USE 	(GPIOB) //Example: GPIOA or GPIOB. Has to match define from ST Library
+#define TX_PIN_TO_USE		(6) // 0 to 15. Example 1 or 2.
+#define RX_PIN_TO_USE		(7) // 0 to 15. Example 1 or 2.
 #define BAUD_RATE	(9600)
+/* END USER CONFIGURABLE DEFINES */
+
+//Register bit for enabling TXEIE bit. This is used instead of the definitions in stm32f4xx_usart.h
+#define USART_TXEIE		0b10000000
+#define USART_RXNEIE	0b100000
+
+#define UART 				(UART_TO_USE)
+#define UART_GPIO_PORT		(GPIOB)
+#define UART_TX_PIN			(0x1 << TX_PIN_TO_USE)
+#define UART_RX_PIN			(0x1 << RX_PIN_TO_USE)
+#define UART_TX_PINSOUCE	(TX_PIN_TO_USE)
+#define UART_RX_PINSOUCE	(RX_PIN_TO_USE)
 
 // Receive buffer for UART, no DMA
 char inputString[BUFFER_DATA_LENGTH]; //string to store individual bytes as they are sent
@@ -49,14 +58,14 @@ static void init_UART_GPIO() {
 	GPIO_init.GPIO_Pin = UART_TX_PIN | UART_RX_PIN;
 	GPIO_init.GPIO_Mode = GPIO_Mode_AF;
 	GPIO_init.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_init.GPIO_OType = GPIO_OType_PP;
-	GPIO_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_init.GPIO_OType = GPIO_OType_OD;
+	GPIO_init.GPIO_PuPd = GPIO_PuPd_UP;
 
 	GPIO_Init(UART_GPIO_PORT, &GPIO_init);
 
 	if(UART == USART1) {
-		GPIO_PinAFConfig(UART_GPIO_PORT, UART_TX_PIN, GPIO_AF_USART1);
-		GPIO_PinAFConfig(UART_GPIO_PORT, UART_RX_PIN, GPIO_AF_USART1);
+		GPIO_PinAFConfig(UART_GPIO_PORT, UART_TX_PINSOUCE, GPIO_AF_USART1);
+		GPIO_PinAFConfig(UART_GPIO_PORT, UART_RX_PINSOUCE, GPIO_AF_USART1);
 	}
 
 }
@@ -87,10 +96,18 @@ static void init_UART_periph() {
 	USART_InitStruct.USART_Mode = USART_Mode_Tx | USART_Mode_Rx; // we want to enable the transmitter and the receiver
 	USART_Init(UART, &USART_InitStruct);
 
-	UART->CR1 |= USART_RXEIE; //Enable the USART1 receive interrupt
+	UART->CR1 |= USART_RXNEIE; //Enable the USART1 receive interrupt
 
-	NVIC_SetPriority(interrupt_type, 7);
-	NVIC_EnableIRQ(interrupt_type);
+//	NVIC_SetPriority(USART1_IRQn, 7);
+//	NVIC_EnableIRQ(USART1_IRQn);
+
+	NVIC_InitTypeDef NVIC_InitStruct;
+
+//	NVIC_InitStruct.NVIC_IRQChannel = USART1_IRQn;
+//	NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+//	NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0;
+//	NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0;
+//	NVIC_Init(&NVIC_InitStruct);
 
 	// finally this enables the complete USART1 peripheral
 	USART_Cmd(UART, ENABLE);
@@ -128,9 +145,9 @@ extern int UART_push_out(char * message) {
 
 extern int UART_push_out_len_debug(char * message, uint8_t length) {
 	for(uint8_t i = 0; i < length; i++) {
-		while(!(UART-> SR & USART_SR_TXE)) {
-			UART->DR = message[i];
-		}
+		while(!(UART->SR & USART_SR_TXE));
+		UART->DR = message[i];
+
 	}
 }
 

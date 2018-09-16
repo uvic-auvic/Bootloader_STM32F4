@@ -47,7 +47,7 @@ void init_debug_task() {
 int main(void)
 {
 
-	debug_task();
+	//debug_task();
 
 	init_LED();
 	Bootloader_Start();
