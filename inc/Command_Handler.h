@@ -10,6 +10,6 @@
 
 extern TaskHandle_t Command_Handler_Task_Handle;
 
-extern void Command_Handler();
+extern void Command_Handler_Task();
 
 #endif /* COMMAND_HANDLER_H_ */

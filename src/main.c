@@ -21,14 +21,21 @@
 #include "stm32f4xx_flash.h"
 #include "User_Defines.h"
 #include "Flash_Interface.h"
+#include "UART.h"
 
 
 
 
 void debug_task() {
 
-	init_flash();
+	receiveBuffer_ptr->payload[0] = 0x40;
+	receiveBuffer_ptr->payload[1] = 0x20;
 
+	uint16_t i = *(uint16_t *)(receiveBuffer_ptr->payload);
+
+	while(1) {
+		i += 5;
+	}
 
 }
 
@@ -49,14 +56,7 @@ int main(void)
 
 	//debug_task();
 
-	init_LED();
 	Bootloader_Start();
-
-//	init_LED();
-//	init_debug_task();
-//	init_Command_Handler();
-//
-//	vTaskStartScheduler();
 
 	for(;;);
 }

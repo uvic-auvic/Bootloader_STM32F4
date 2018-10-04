@@ -18,6 +18,7 @@
 extern void led_on();
 extern void led_off();
 extern void led_toggle();
+extern void Blinky_LED_Task();
 extern void init_LED();
 extern void deinit_LED();
 

@@ -9,7 +9,7 @@
 #define FLASH_INTERFACE_H_
 
 
-extern void erase_sector(uint32_t start_addr);
+extern void erase_app_sector();
 extern uint32_t read_word(uint32_t addr);
 extern uint8_t read_byte(uint32_t addr);
 extern int8_t write_word(uint32_t addr, uint32_t data);

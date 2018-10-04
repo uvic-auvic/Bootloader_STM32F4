@@ -8,11 +8,12 @@
 #include "stm32f4xx.h"
 #include "LED.h"
 
-#define LED_GPIO_PORT (GPIOD)
+#define LED_GPIO_PORT 	(GPIOD)
 #define LED_GPIO_PIN_1	(GPIO_Pin_15)
 #define LED_GPIO_PIN_2	(GPIO_Pin_14)
 #define LED_GPIO_PIN_3	(GPIO_Pin_13)
 #define LED_GPIO_PIN_4	(GPIO_Pin_12)
+#define LED_TO_BLINK	(LED_GPIO_PIN_2)
 
 extern void led_on(uint32_t LED) {
 
@@ -27,6 +28,14 @@ extern void led_off(uint32_t LED) {
 extern void led_toggle(uint32_t LED) {
 
 	LED_GPIO_PORT->ODR ^= LED;
+}
+
+extern void Blinky_LED_Task() {
+
+	while(1) {
+		led_toggle(LED_TO_BLINK);
+		vTaskDelay(500);
+	}
 }
 
 extern void init_LED() {

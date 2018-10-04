@@ -11,19 +11,11 @@
 #include "FreeRTOSConfig.h"
 #include "task.h"
 
+#include "User_Defines.h"
+#include "UART.h"
 #include "LED.h"
 #include "2DArray_Buffer.h"
 #include "Command_Handler.h"
-
-/***************************************************************
- * USER CONFIGURABLE DEFINES
- ***************************************************************/
-#define UART_TO_USE			(USART1) //Example: USART1 or USART2. Has to match define from ST Library
-#define GPIO_PORT_TO_USE 	(GPIOB) //Example: GPIOA or GPIOB. Has to match define from ST Library
-#define TX_PIN_TO_USE		(6) // 0 to 15. Example 1 or 2.
-#define RX_PIN_TO_USE		(7) // 0 to 15. Example 1 or 2.
-#define BAUD_RATE	(9600)
-/* END USER CONFIGURABLE DEFINES */
 
 //Register bit for enabling TXEIE bit. This is used instead of the definitions in stm32f4xx_usart.h
 #define USART_TXEIE		0b10000000
@@ -36,13 +28,16 @@
 #define UART_TX_PINSOUCE	(TX_PIN_TO_USE)
 #define UART_RX_PINSOUCE	(RX_PIN_TO_USE)
 
-// Receive buffer for UART, no DMA
-char inputString[BUFFER_DATA_LENGTH]; //string to store individual bytes as they are sent
-uint8_t inputStringIndex = 0;
-_2DArray_Buffer_t inputBuffer = {};
+// Receive buffer for UART with DMA
+static struct commBuffer receiveBuffer;
+struct commBuffer * receiveBuffer_ptr = &receiveBuffer;
+
+// Receive buffer for UART with DMA
+
+uint8_t inputBuffer_DMA[INPUT_BUFFER_SIZE_BYTES];
 
 // Transmit buffer for UART, no DMA
-#define OUTPUT_BUFFER_SIZE_BYTES	64
+
 char outputBuffer[OUTPUT_BUFFER_SIZE_BYTES];
 uint8_t outputBufferIndexHead = 0, outputBufferIndexTail = 0;
 
@@ -101,9 +96,8 @@ static void init_UART_periph() {
 	USART_InitStruct.USART_Mode = USART_Mode_Tx | USART_Mode_Rx; // we want to enable the transmitter and the receiver
 	USART_Init(UART, &USART_InitStruct);
 
-	UART->CR1 |= USART_RXNEIE; //Enable the USART1 receive interrupt
-
-	NVIC_InitTypeDef NVIC_InitStruct;
+	//UART->CR1 |= USART_RXNEIE; //Enable the USART1 receive interrupt
+	UART->CR2 |= USART_CR2_LBDIE | USART_CR2_LINEN; // Enable Line break detection
 
 	NVIC_SetPriority(interrupt_number, 7);
 	NVIC_EnableIRQ(interrupt_number);
@@ -112,8 +106,41 @@ static void init_UART_periph() {
 	USART_Cmd(UART, ENABLE);
 }
 
-
 static void init_UART_DMA() {
+	//USART1_RX is mapped on DM2 Stream2 Channel4
+
+	RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
+
+	DMA_STREAM->CR = 0;
+
+	while((DMA_STREAM->CR & 0x1) == 1);
+
+	DMA_STREAM->PAR = (uint32_t) &(UART->DR);
+	DMA_STREAM->M0AR = (uint32_t) &(receiveBuffer_ptr->payloadSize);
+	DMA_STREAM->NDTR = PAYLOAD_INFO_SIZE_BYTES;
+	DMA_STREAM->CR |= DMA_Channel_4;
+	DMA_STREAM->CR |= DMA_DIR_PeripheralToMemory;
+	//DMA_STREAM->CR |= DMA_SxCR_CIRC; // Enable Circular mode
+	DMA_STREAM->CR |= DMA_SxCR_MINC; // Enable Memory
+	DMA_STREAM->CR |= DMA_SxCR_TCIE; // Enable transfer complete interrupt
+	DMA->LIFCR |= 0xFFFFFFFF;
+	DMA->HIFCR |= 0xFFFFFFFF;
+
+	UART->CR3 |= USART_CR3_DMAR; // Enable DMA in UART Peripheral
+
+	NVIC_SetPriority(DMA2_Stream2_IRQn, 7);
+	NVIC_EnableIRQ(DMA2_Stream2_IRQn);
+
+	DMA_STREAM->CR |= 0x1;
+
+}
+
+static void init_recieve_buffer() {
+
+	receiveBuffer_ptr->isRecivingHeader = 1;
+	receiveBuffer_ptr->isRecivingPayload = 0;
+	receiveBuffer_ptr->payloadSize = 0;
+	receiveBuffer_ptr->previousPacketID = 0;
 
 }
 
@@ -122,6 +149,7 @@ extern void init_UART() {
 	init_UART_GPIO();
 	init_UART_periph();
 	init_UART_DMA();
+	init_recieve_buffer();
 
 
 }
@@ -133,16 +161,7 @@ extern void deinit_UART() {
 /***************************************************************
  * INTERFACE FUNCTIONS
  ***************************************************************/
-/*
- * ERROR CODE:
- * -1 = String length is not 1 or greater
- * -2 = OutputBuffer will overflow. Wait some time and retry
- * 1  = Added to buffer successfully
- */
-extern int UART_push_out(char* mesg) {
 
-	 return UART_push_out_len(mesg, strlen(mesg));
-}
 
 /*
  * ERROR CODE:
@@ -175,6 +194,17 @@ extern int UART_push_out_len(char* mesg, int len) {
 
 }
 
+/*
+ * ERROR CODE:
+ * -1 = String length is not 1 or greater
+ * -2 = OutputBuffer will overflow. Wait some time and retry
+ * 1  = Added to buffer successfully
+ */
+extern int UART_push_out(char* mesg) {
+
+	 return UART_push_out_len(mesg, strlen(mesg));
+}
+
 extern int UART_push_out_len_debug(char * message, uint8_t length) {
 	for(uint8_t i = 0; i < length; i++) {
 		while(!(UART->SR & USART_SR_TXE));
@@ -191,30 +221,10 @@ extern int UART_push_out_debug(char * message) {
  * INTERRUPT HANDLERS
  ***************************************************************/
 
+
 static inline void UART_IRQHandler() {
-	if((UART->SR & USART_FLAG_RXNE) == USART_FLAG_RXNE) { //If character is received
 
-		char tempInput[1];
-		tempInput[0] = UART->DR;
-
-		//Check for new line character which indicates end of command
-		if (tempInput[0] == '\n' || tempInput[0] == '\r') {
-
-			if(strlen(inputString) > 0) {
-				Buffer_add(&inputBuffer, inputString, BUFFER_DATA_LENGTH);
-				memset(inputString, 0, BUFFER_DATA_LENGTH);
-				inputStringIndex = 0;
-
-				BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-				vTaskNotifyGiveFromISR(Command_Handler_Task_Handle, &xHigherPriorityTaskWoken);
-			}
-
-		} else {
-			inputString[inputStringIndex] = tempInput[0];
-			inputStringIndex = (inputStringIndex + 1) % BUFFER_DATA_LENGTH;
-		}
-
-	} else if ((UART->SR & USART_FLAG_TXE) == USART_FLAG_TXE) { // If Transmission is complete
+	if ((UART->SR & USART_FLAG_TXE) == USART_FLAG_TXE) { // If Transmission is complete
 
 		if ((outputBufferIndexHead - outputBufferIndexTail) != 0) {
 			UART->DR = outputBuffer[outputBufferIndexTail];
@@ -236,4 +246,43 @@ void USART2_IRQHandler() {
 
 void USART6_IRQHandler() {
 	UART_IRQHandler();
+}
+
+static inline void DMA_TC_Handler() { // DMA Transfer Complete Handler
+
+	if (receiveBuffer_ptr->isRecivingHeader == 1) {
+
+		DMA_STREAM->M0AR = (uint32_t) receiveBuffer_ptr->payload;
+		DMA_STREAM->NDTR = receiveBuffer_ptr->payloadSize;
+		DMA_STREAM->CR |= 0x1;
+
+		receiveBuffer_ptr->isRecivingHeader = 0;
+		receiveBuffer_ptr->isRecivingPayload = 1;
+
+		UART_push_out("ACK\r\n");
+
+	} else if (receiveBuffer_ptr->isRecivingPayload == 1) {
+
+		DMA_STREAM->M0AR = (uint32_t) &(receiveBuffer_ptr->payloadSize);
+		DMA_STREAM->NDTR = PAYLOAD_INFO_SIZE_BYTES;
+		//DMA_STREAM->CR |= 0x1; DMA will be enabled from Command Handler code
+
+		receiveBuffer_ptr->isRecivingHeader = 1;
+		receiveBuffer_ptr->isRecivingPayload = 0;
+
+		vTaskNotifyGiveFromISR(Command_Handler_Task_Handle, pdFALSE);
+	}
+
+}
+
+void DMA2_Stream2_IRQHandler() {
+
+	if((DMA->LISR & DMA_LISR_TCIF2 ) == DMA_LISR_TCIF2 ) {
+
+		DMA->LIFCR |= DMA_LIFCR_CTCIF2;
+
+		DMA_TC_Handler();
+	}
+
+
 }
