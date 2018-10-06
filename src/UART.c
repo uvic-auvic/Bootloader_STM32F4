@@ -30,7 +30,7 @@
 
 // Receive buffer for UART with DMA
 static struct commBuffer receiveBuffer;
-struct commBuffer * receiveBuffer_ptr = &receiveBuffer;
+commBuffer_t * receiveBuffer_ptr = &receiveBuffer;
 
 // Receive buffer for UART with DMA
 

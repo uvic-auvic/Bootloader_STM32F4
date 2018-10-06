@@ -17,45 +17,13 @@
 
 #include "LED.h"
 #include "Command_Handler.h"
-
-#include "stm32f4xx_flash.h"
+#include "Bootloader.h"
 #include "User_Defines.h"
 #include "Flash_Interface.h"
 #include "UART.h"
 
-
-
-
-void debug_task() {
-
-	receiveBuffer_ptr->payload[0] = 0x40;
-	receiveBuffer_ptr->payload[1] = 0x20;
-
-	uint16_t i = *(uint16_t *)(receiveBuffer_ptr->payload);
-
-	while(1) {
-		i += 5;
-	}
-
-}
-
-void init_debug_task() {
-
-    xTaskCreate(debug_task,
-		(const char *)"debug_task",
-		configMINIMAL_STACK_SIZE,
-		NULL,                 // pvParameters
-		tskIDLE_PRIORITY + 1, // uxPriority
-		NULL              ); // pvCreatedTask */
-}
-
-
-
 int main(void)
 {
-
-	//debug_task();
-
 	Bootloader_Start();
 
 	for(;;);

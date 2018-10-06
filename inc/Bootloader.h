@@ -14,18 +14,18 @@
 #include "task.h"
 #include "semphr.h"
 
-struct flashBuffer {
+typedef struct flashBuffer {
 	SemaphoreHandle_t mutex;
 	uint32_t startingAddress;
 	uint16_t length; //In Bytes
 	uint8_t data[MAX_DATA_SIZE_BYTES];
-};
+}flashBuffer_t;
 
-struct firmwareInfo {
+typedef struct firmwareInfo {
 	uint16_t programSize;
 	char firmwareVersion[FIRMWARE_VERSION_SIZE_BYTES];
 	char deviceID[DEVICE_ID_MAX_SIZE_BYTES];
-};
+}firmwareInfo_t;
 
 #define FLASHBUFFER_MUTEX_TIMEOUT	(portMAX_DELAY)
 

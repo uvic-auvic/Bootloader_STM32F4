@@ -30,8 +30,11 @@
 /* GLOBAL VARIABLES */
 QueueHandle_t Bootloader_Queue_Handle = NULL;
 
-struct flashBuffer * flashBuffer_ptr;
-struct firmwareInfo * firmwareInfo_ptr;
+static flashBuffer_t flashBuffer_var;
+flashBuffer_t * flashBuffer_ptr = &flashBuffer_var;
+
+static firmwareInfo_t firmwareInfo_var;
+firmwareInfo_t * firmwareInfo_ptr = &firmwareInfo_var;
 
 static void init_flash_buffer() {
 	flashBuffer_ptr->length = 0;
@@ -62,7 +65,7 @@ static int8_t program_code_in_buffer() {
 	if (xSemaphoreTake(flashBuffer_ptr->mutex, FLASHBUFFER_MUTEX_TIMEOUT)) {
 		//Start writing to flash
 	 	for(uint16_t i = 0; i < flashBuffer_ptr->length; i += 4) {
-			if(write_word(flashBuffer_ptr->startingAddress + i, flashBuffer_ptr->data[i]) == -1) {
+			if(write_word(flashBuffer_ptr->startingAddress + i, *(uint32_t *)(flashBuffer_ptr->data + i)) == -1) {
 				//ERROR: Accessing restricted flash sector
 				xSemaphoreGive(flashBuffer_ptr->mutex);
 				return -1;
@@ -72,7 +75,7 @@ static int8_t program_code_in_buffer() {
 		//Verify that data has been written properly
 		for(uint16_t i = 0; i < flashBuffer_ptr->length; i += 4) {
 
-			if(read_word(flashBuffer_ptr->startingAddress + i) != flashBuffer_ptr->data[i]) {
+			if(read_word(flashBuffer_ptr->startingAddress + i) != *(uint32_t *)(flashBuffer_ptr->data + i)) {
 				//ERROR: Flash data does not match expected data
 				xSemaphoreGive(flashBuffer_ptr->mutex);
 				return -2;
@@ -92,9 +95,7 @@ static int8_t program_code_in_buffer() {
 // Starts the application
 static void startApplication() {
 
-	/* Deinit all Peripherals */
-	deinit_LED();
-	deinit_UART();
+	/* Deinit flash */
 	deinit_flash();
 
 	/* Branch to Application */
@@ -139,6 +140,7 @@ static void startApplication() {
 
 static void Bootloader_Main_Task() {
 
+	led_behaviour(0);
 	Bootloader_Queue_Handle = xQueueCreate(BOOTLOADER_QUEUE_LENGTH, BOOTLOADER_QUEUE_SIZE);
 	char queueCommand = 0;
 
@@ -157,6 +159,7 @@ static void Bootloader_Main_Task() {
 	}
 
 	/* BEGIN BOOTLOADING */
+	led_behaviour(500);
 	{
 		//Send out device ID and max data size
 		while(UART_push_out("DEVICE_ID:") == -2);
@@ -170,7 +173,7 @@ static void Bootloader_Main_Task() {
 	}
 
 	//Erase app sector before loading program
-	//erase_app_sector();
+	erase_app_sector(); // Temporary
 
 	while(1) {
 
@@ -190,15 +193,19 @@ static void Bootloader_Main_Task() {
 				UART_push_out(appSize);
 				UART_push_out(" bytes.\r\n");
 			} else {
-				//Program firmware data into config section
+				//TO DO: Program firmware data into config section
+				led_behaviour(150);
+				erase_app_sector();
 			}
 			break;
 
 		case 'M':
+			led_behaviour(150);
 			program_code_in_buffer();
 			break;
 
 		case 'L':
+			led_behaviour(500);
 			break;
 
 		default:
@@ -227,11 +234,11 @@ static void init_Bootloader() {
 
 	// Create the Command Handler task
     xTaskCreate(Command_Handler_Task,
-		(const char *)"Command_Handle_Taskr",
+		(const char *)"Command_Handle_Task",
 		configMINIMAL_STACK_SIZE,
 		NULL,                 // pvParameters
 		tskIDLE_PRIORITY + 1, // uxPriority
-		&Command_Handler_Task_Handle              ); // pvCreatedTask */
+		&Command_Handler_Task_Handle); // pvCreatedTask */
 
     // Create the blinky LED task
     xTaskCreate(Blinky_LED_Task,

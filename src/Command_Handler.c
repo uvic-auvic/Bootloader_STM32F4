@@ -51,7 +51,6 @@ static uint8_t check_payload_CRC() {
 	} else {
 		return 0;
 	}
-
 }
 
 extern void Command_Handler_Task() {
@@ -67,6 +66,8 @@ extern void Command_Handler_Task() {
 
 		} else
 		{
+			receiveBuffer_ptr->previousPacketID += 1;
+
 			//Check if command is in ASCII
 			if( *(char *)(receiveBuffer_ptr->payload + DATA_TYPE_OFFSET) == DATA_TYPE_ASCII)
 			{
@@ -83,6 +84,7 @@ extern void Command_Handler_Task() {
 				else if(strncmp(CMD_START_STR, (char *)(receiveBuffer_ptr->payload + DATA_OFFSET), CMD_START_LENGTH) == 0)
 				{
 					char charToSend = 'S';
+					UART_push_out("ACK\r\n");
 					xQueueSend(Bootloader_Queue_Handle, &charToSend, portMAX_DELAY);
 					//ACK response will be sent out from Bootloader task
 				}
@@ -103,6 +105,7 @@ extern void Command_Handler_Task() {
 					//ERROR: Error in payload
 				} else
 				{
+
 					// First program packet
 					if(*(char *)(receiveBuffer_ptr->payload + DATA_TYPE_OFFSET) == DATA_TYPE_FIRST)
 					{
@@ -113,7 +116,11 @@ extern void Command_Handler_Task() {
 						memcpy(firmwareInfo_ptr->firmwareVersion, receiveBuffer_ptr->payload + FIRMWARE_VERSION_OFFSET, FIRMWARE_VERSION_SIZE_BYTES);
 						memcpy(firmwareInfo_ptr->deviceID, receiveBuffer_ptr->payload + DEVICE_ID_OFFSET, deviceIDSize);
 
-						xQueueSend(Bootloader_Queue_Handle, 'F', portMAX_DELAY);
+						//Notify Bootloader Task
+						xQueueSend(Bootloader_Queue_Handle, "F", portMAX_DELAY);
+
+						//Send success through UART
+						UART_push_out("ACK\r\n");
 
 					}
 
@@ -129,9 +136,10 @@ extern void Command_Handler_Task() {
 							memcpy(flashBuffer_ptr->data, receiveBuffer_ptr->payload + DATA_OFFSET, flashBuffer_ptr->length); //Copy data into buffer
 
 							xSemaphoreGive(flashBuffer_ptr->mutex);
-							xQueueSend(Bootloader_Queue_Handle, 'M', portMAX_DELAY);
+							xQueueSend(Bootloader_Queue_Handle, "M", portMAX_DELAY); //Notify bootloader task
 
 							//Send success through UART
+							UART_push_out("ACK\r\n");
 
 						} else
 						{
@@ -144,7 +152,8 @@ extern void Command_Handler_Task() {
 					//Last program packet
 					else if(*(char *)(receiveBuffer_ptr->payload + DATA_TYPE_OFFSET) == DATA_TYPE_LAST)
 					{
-
+						//Send success through UART
+						UART_push_out("ACK\r\n");
 					}
 
 					//No Matches
@@ -159,7 +168,6 @@ extern void Command_Handler_Task() {
 
 		}
 
-		UART_push_out("ACK\r\n");
 		//Enable DMA stream
 		DMA_STREAM->CR |= 0x1;
 
