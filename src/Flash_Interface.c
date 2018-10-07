@@ -8,12 +8,11 @@
 #include "stm32f4xx.h"
 #include "User_Defines.h"
 
-uint8_t boot_sector_write_protect = 1;
-uint8_t app_sector_write_protect = 0;
+uint8_t app_sector_write_protect = 0; //For future use. Ability to lock writing to app sector
 
 extern void erase_app_sector() {
 	// DO NOT erase sector_0 and sector_1. Bootloader resides in this area
-#warning "Need to check if FLASH_COMPLETE status is returned"
+#warning "TO DO:Need to check if FLASH_COMPLETE status is returned"
 	FLASH_EraseSector(FLASH_Sector_2, VoltageRange_3);
 	FLASH_EraseSector(FLASH_Sector_3, VoltageRange_3);
 	FLASH_EraseSector(FLASH_Sector_4, VoltageRange_3);

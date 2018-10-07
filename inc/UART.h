@@ -21,18 +21,16 @@ typedef struct commBuffer {
 	uint8_t payload[MAX_PAYLOAD_SIZE_BYTES];
 }commBuffer_t;
 
-extern struct commBuffer * receiveBuffer_ptr;
-extern uint8_t inputBuffer_DMA[INPUT_BUFFER_SIZE_BYTES];
+extern commBuffer_t * receiveBuffer_ptr;
 
 extern void init_UART();
-extern void deinit_UART();
 extern int UART_push_out(char * mesg);
 extern int UART_push_out_len(char* mesg, int len);
 
 #ifdef DEBUG
 
-extern int UART_push_out_len_debug(char * message, uint8_t length);
-extern int UART_push_out_debug(char * message);
+extern void UART_push_out_len_debug(char * message, uint8_t length);
+extern void UART_push_out_debug(char * message);
 
 #endif
 

@@ -15,12 +15,8 @@
 #include "FreeRTOSConfig.h"
 #include "task.h"
 
-#include "LED.h"
-#include "Command_Handler.h"
 #include "Bootloader.h"
-#include "User_Defines.h"
-#include "Flash_Interface.h"
-#include "UART.h"
+
 
 int main(void)
 {
@@ -28,7 +24,6 @@ int main(void)
 
 	for(;;);
 }
-
 
 void vApplicationTickHook(void) {
 }

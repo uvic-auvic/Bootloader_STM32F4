@@ -36,6 +36,9 @@ flashBuffer_t * flashBuffer_ptr = &flashBuffer_var;
 static firmwareInfo_t firmwareInfo_var;
 firmwareInfo_t * firmwareInfo_ptr = &firmwareInfo_var;
 
+/**
+ * Initialize flash buffer
+ */
 static void init_flash_buffer() {
 	flashBuffer_ptr->length = 0;
 	flashBuffer_ptr->startingAddress = APP_START_ADDRESS;
@@ -49,7 +52,7 @@ static void init_flash_buffer() {
  */
 static int8_t is_app_sector_valid() {
 	//Do checksum
-
+#warning "TO DO:Need to do app integrity checking on startup"
 	return 1;
 }
 
@@ -67,6 +70,7 @@ static int8_t program_code_in_buffer() {
 	 	for(uint16_t i = 0; i < flashBuffer_ptr->length; i += 4) {
 			if(write_word(flashBuffer_ptr->startingAddress + i, *(uint32_t *)(flashBuffer_ptr->data + i)) == -1) {
 				//ERROR: Accessing restricted flash sector
+#warning "TO DO:Return error through UART"
 				xSemaphoreGive(flashBuffer_ptr->mutex);
 				return -1;
 			}
@@ -77,14 +81,15 @@ static int8_t program_code_in_buffer() {
 
 			if(read_word(flashBuffer_ptr->startingAddress + i) != *(uint32_t *)(flashBuffer_ptr->data + i)) {
 				//ERROR: Flash data does not match expected data
+#warning "TO DO:Return error through UART"
 				xSemaphoreGive(flashBuffer_ptr->mutex);
 				return -2;
 			}
-
 		}
 
 	} else {
 		//Could not get mutex
+#warning "TO DO:Return error through UART"
 		return -3;
 	}
 
@@ -92,10 +97,43 @@ static int8_t program_code_in_buffer() {
 	return 1;
 }
 
+/* Sets all peripheral registers to reset value and turns off clock*/
+static void deinit_peripherals() {
+	//Reset all peripherals
+	RCC->AHB1RSTR |= RCC_AHB1RSTR_DMA1RST | RCC_AHB1RSTR_DMA2RST | RCC_AHB1RSTR_GPIOARST | RCC_AHB1RSTR_GPIOBRST | RCC_AHB1RSTR_GPIOCRST
+			| RCC_AHB1RSTR_GPIODRST | RCC_AHB1RSTR_GPIOERST | RCC_AHB1RSTR_GPIOHRST | RCC_AHB1RSTR_CRCRST;
+	RCC->AHB2RSTR |= RCC_AHB2RSTR_OTGFSRST;
+	RCC->APB1RSTR |= RCC_APB1RSTR_I2C1RST | RCC_APB1RSTR_I2C2RST | RCC_APB1RSTR_I2C3RST | RCC_APB1RSTR_USART2RST | RCC_APB1RSTR_SPI2RST
+			 | RCC_APB1RSTR_SPI3RST | RCC_APB1RSTR_TIM5RST | RCC_APB1RSTR_TIM4RST | RCC_APB1RSTR_TIM3RST | RCC_APB1RSTR_TIM2RST;
+	RCC->APB2RSTR |= RCC_APB2RSTR_SPI1RST | RCC_APB2RSTR_SPI4RST | RCC_APB2RSTR_SPI5RST | RCC_APB2RSTR_TIM1RST | RCC_APB2RSTR_TIM10RST
+			| RCC_APB2RSTR_TIM11RST | RCC_APB2RSTR_TIM9RST | RCC_APB2RSTR_USART1RST | RCC_APB2RSTR_USART6RST | RCC_APB2RSTR_SDIORST | RCC_APB2RSTR_ADCRST;
+
+	//Write bits back to 0
+	RCC->AHB1RSTR &= ~(RCC_AHB1RSTR_DMA1RST | RCC_AHB1RSTR_DMA2RST | RCC_AHB1RSTR_GPIOARST | RCC_AHB1RSTR_GPIOBRST | RCC_AHB1RSTR_GPIOCRST
+			| RCC_AHB1RSTR_GPIODRST | RCC_AHB1RSTR_GPIOERST | RCC_AHB1RSTR_GPIOHRST);
+	RCC->AHB2RSTR &= ~(RCC_AHB2RSTR_OTGFSRST);
+	RCC->APB1RSTR &= ~(RCC_APB1RSTR_I2C1RST | RCC_APB1RSTR_I2C2RST | RCC_APB1RSTR_I2C3RST | RCC_APB1RSTR_USART2RST | RCC_APB1RSTR_SPI2RST
+			 | RCC_APB1RSTR_SPI3RST | RCC_APB1RSTR_TIM5RST | RCC_APB1RSTR_TIM4RST | RCC_APB1RSTR_TIM3RST | RCC_APB1RSTR_TIM2RST);
+	RCC->APB2RSTR &= ~(RCC_APB2RSTR_SPI1RST | RCC_APB2RSTR_SPI4RST | RCC_APB2RSTR_SPI5RST | RCC_APB2RSTR_TIM1RST | RCC_APB2RSTR_TIM10RST
+			| RCC_APB2RSTR_TIM11RST | RCC_APB2RSTR_TIM9RST | RCC_APB2RSTR_USART1RST | RCC_APB2RSTR_USART6RST | RCC_APB2RSTR_SDIORST | RCC_APB2RSTR_ADCRST);
+
+	//Turn off clock to all peripherals
+	RCC->AHB1ENR &= ~(RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMA2EN | RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOBEN | RCC_AHB1ENR_GPIOCEN | RCC_AHB1ENR_GPIODEN
+			| RCC_AHB1ENR_GPIOEEN | RCC_AHB1ENR_GPIOHEN | RCC_AHB1ENR_CRCEN);
+	RCC->AHB2ENR &= ~(RCC_AHB2ENR_OTGFSEN);
+	RCC->APB1ENR &= ~(RCC_APB1ENR_I2C1EN | RCC_APB1ENR_I2C2EN | RCC_APB1ENR_I2C3EN | RCC_APB1ENR_USART2EN | RCC_APB1ENR_SPI2EN
+			| RCC_APB1ENR_SPI3EN | RCC_APB1ENR_TIM5EN | RCC_APB1ENR_TIM4EN | RCC_APB1ENR_TIM3EN | RCC_APB1ENR_TIM2EN);
+	RCC->APB2ENR &= ~(RCC_APB2ENR_SPI1EN | RCC_APB2ENR_SPI4EN | RCC_APB2ENR_SPI5EN | RCC_APB2ENR_TIM1EN | RCC_APB2ENR_TIM10EN
+			| RCC_APB2ENR_TIM11EN | RCC_APB2ENR_TIM9EN | RCC_APB2ENR_USART1EN | RCC_APB2ENR_USART6EN | RCC_APB2ENR_SDIOEN | RCC_APB2ENR_ADC1EN);
+}
+
 // Starts the application
 static void startApplication() {
 
-	/* Deinit flash */
+	/* Deinit peripherals */
+	deinit_peripherals();
+
+	/* Lock flash */
 	deinit_flash();
 
 	/* Branch to Application */
@@ -153,12 +191,14 @@ static void Bootloader_Main_Task() {
 
 				startApplication();
 			} else {
+#warning "TO DO:Return error through UART"
 				//ERROR: App sector corrupt. Cannot boot.
 			}
 		}
 	}
 
 	/* BEGIN BOOTLOADING */
+	led_on(LED2);
 	led_behaviour(500);
 	{
 		//Send out device ID and max data size
@@ -173,6 +213,7 @@ static void Bootloader_Main_Task() {
 	}
 
 	//Erase app sector before loading program
+#warning "TO DO:This need to be removed once first packet is implemented"
 	erase_app_sector(); // Temporary
 
 	while(1) {
@@ -182,7 +223,7 @@ static void Bootloader_Main_Task() {
 		switch (queueCommand) {
 		case 'F':
 
-			//Check firmware is compatible with this device
+			//Check if firmware is compatible with this device
 			if(strncmp(DEVICEID, firmwareInfo_ptr->deviceID, DEVICE_ID_MAX_SIZE_BYTES)) {
 				//ERROR: DEVICE ID DOES NOT MATCH
 				UART_push_out("ERR:FIRMWARE_INCOMPATIBLE\r\n");

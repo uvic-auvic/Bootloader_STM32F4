@@ -4,6 +4,7 @@
  *  Created on: Aug 13, 2018
  *      Author: Poornachander
  */
+#include <string.h>
 
 #include "stm32f4xx.h"
 
@@ -14,7 +15,6 @@
 #include "User_Defines.h"
 #include "UART.h"
 #include "LED.h"
-#include "2DArray_Buffer.h"
 #include "Command_Handler.h"
 
 //Register bit for enabling TXEIE bit. This is used instead of the definitions in stm32f4xx_usart.h
@@ -29,15 +29,10 @@
 #define UART_RX_PINSOUCE	(RX_PIN_TO_USE)
 
 // Receive buffer for UART with DMA
-static struct commBuffer receiveBuffer;
+static commBuffer_t receiveBuffer;
 commBuffer_t * receiveBuffer_ptr = &receiveBuffer;
 
-// Receive buffer for UART with DMA
-
-uint8_t inputBuffer_DMA[INPUT_BUFFER_SIZE_BYTES];
-
 // Transmit buffer for UART, no DMA
-
 char outputBuffer[OUTPUT_BUFFER_SIZE_BYTES];
 uint8_t outputBufferIndexHead = 0, outputBufferIndexTail = 0;
 
@@ -71,6 +66,7 @@ static void init_UART_GPIO() {
 }
 
 static void init_UART_periph() {
+
 	uint32_t interrupt_number = 0;
 	if (UART == USART1) {
 
@@ -96,9 +92,6 @@ static void init_UART_periph() {
 	USART_InitStruct.USART_Mode = USART_Mode_Tx | USART_Mode_Rx; // we want to enable the transmitter and the receiver
 	USART_Init(UART, &USART_InitStruct);
 
-	//UART->CR1 |= USART_RXNEIE; //Enable the USART1 receive interrupt
-	UART->CR2 |= USART_CR2_LBDIE | USART_CR2_LINEN; // Enable Line break detection
-
 	NVIC_SetPriority(interrupt_number, 7);
 	NVIC_EnableIRQ(interrupt_number);
 
@@ -107,8 +100,8 @@ static void init_UART_periph() {
 }
 
 static void init_UART_DMA() {
-	//USART1_RX is mapped on DM2 Stream2 Channel4
 
+	//USART1_RX is mapped on DM2 Stream2 Channel4
 	RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
 
 	DMA_STREAM->CR = 0;
@@ -120,7 +113,6 @@ static void init_UART_DMA() {
 	DMA_STREAM->NDTR = PAYLOAD_INFO_SIZE_BYTES;
 	DMA_STREAM->CR |= DMA_Channel_4;
 	DMA_STREAM->CR |= DMA_DIR_PeripheralToMemory;
-	//DMA_STREAM->CR |= DMA_SxCR_CIRC; // Enable Circular mode
 	DMA_STREAM->CR |= DMA_SxCR_MINC; // Enable Memory
 	DMA_STREAM->CR |= DMA_SxCR_TCIE; // Enable transfer complete interrupt
 	DMA->LIFCR |= 0xFFFFFFFF;
@@ -150,11 +142,6 @@ extern void init_UART() {
 	init_UART_periph();
 	init_UART_DMA();
 	init_recieve_buffer();
-
-
-}
-
-extern void deinit_UART() {
 
 }
 
@@ -205,7 +192,7 @@ extern int UART_push_out(char* mesg) {
 	 return UART_push_out_len(mesg, strlen(mesg));
 }
 
-extern int UART_push_out_len_debug(char * message, uint8_t length) {
+extern void UART_push_out_len_debug(char * message, uint8_t length) {
 	for(uint8_t i = 0; i < length; i++) {
 		while(!(UART->SR & USART_SR_TXE));
 		UART->DR = message[i];
@@ -213,14 +200,13 @@ extern int UART_push_out_len_debug(char * message, uint8_t length) {
 	}
 }
 
-extern int UART_push_out_debug(char * message) {
+extern void UART_push_out_debug(char * message) {
 	UART_push_out_len_debug(message, strlen(message));
 }
 
 /***************************************************************
  * INTERRUPT HANDLERS
  ***************************************************************/
-
 
 static inline void UART_IRQHandler() {
 
@@ -265,7 +251,6 @@ static inline void DMA_TC_Handler() { // DMA Transfer Complete Handler
 
 		DMA_STREAM->M0AR = (uint32_t) &(receiveBuffer_ptr->payloadSize);
 		DMA_STREAM->NDTR = PAYLOAD_INFO_SIZE_BYTES;
-		//DMA_STREAM->CR |= 0x1; DMA will be enabled from Command Handler code
 
 		receiveBuffer_ptr->isRecivingHeader = 1;
 		receiveBuffer_ptr->isRecivingPayload = 0;

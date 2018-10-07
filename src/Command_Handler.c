@@ -62,6 +62,7 @@ extern void Command_Handler_Task() {
 		//Check packet ID
 		if( *(uint16_t *)(receiveBuffer_ptr->payload + PACKET_ID_OFFSET) != (receiveBuffer_ptr->previousPacketID + 1) && !OVERRIDE_PACKET_ID_CHECK)
 		{
+#warning "TO DO:Return error through UART"
 			//ERROR: Packet not in order
 
 		} else
@@ -86,12 +87,12 @@ extern void Command_Handler_Task() {
 					char charToSend = 'S';
 					UART_push_out("ACK\r\n");
 					xQueueSend(Bootloader_Queue_Handle, &charToSend, portMAX_DELAY);
-					//ACK response will be sent out from Bootloader task
 				}
 
 				//No matches
 				else
 				{
+#warning "TO DO:Return error through UART"
 					//No matches for ASCII commands
 				}
 
@@ -102,6 +103,7 @@ extern void Command_Handler_Task() {
 			{
 
 				if(check_payload_CRC() == 0 && !OVERRIDE_CRC_CHECK) {
+#warning "TO DO:Return error through UART"
 					//ERROR: Error in payload
 				} else
 				{
@@ -159,7 +161,7 @@ extern void Command_Handler_Task() {
 					//No Matches
 					else
 					{
-
+#warning "TO DO:Return error through UART"
 					}
 
 				}

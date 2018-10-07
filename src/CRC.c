@@ -27,7 +27,6 @@ extern uint32_t calculate_CRC(uint32_t * input, uint16_t length) {
 	CRC->CR |= CRC_CR_RESET;
 
 	for (uint16_t i = 0; i < length; i += 4) {
-		uint32_t test = *input;
 		CRC->DR = *(input);
 		input += 1;
 	}

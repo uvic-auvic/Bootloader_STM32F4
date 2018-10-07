@@ -31,8 +31,8 @@ typedef struct firmwareInfo {
 
 extern TaskHandle_t Bootloader_Task_Handle;
 extern QueueHandle_t Bootloader_Queue_Handle;
-extern struct flashBuffer * flashBuffer_ptr;
-extern struct firmwareInfo * firmwareInfo_ptr;
+extern flashBuffer_t * flashBuffer_ptr;
+extern firmwareInfo_t * firmwareInfo_ptr;
 
 extern void Bootloader_Start();
 
