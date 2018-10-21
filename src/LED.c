@@ -10,8 +10,7 @@
 #include "FreeRTOSConfig.h"
 #include "task.h"
 #include "LED.h"
-
-#define LED_TO_BLINK	(LED2)
+#include "User_Defines.h"
 
 static uint16_t led_period = 0;
 
@@ -58,6 +57,8 @@ extern void init_LED() {
 
 	if (LED_GPIO_PORT == GPIOD) {
 		RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN;
+	} else if(LED_GPIO_PORT == GPIOA) {
+		RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
 	}
 
 	GPIO_InitTypeDef GPIO_init;

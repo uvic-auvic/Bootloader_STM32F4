@@ -18,7 +18,7 @@
 #define OVERRIDE_PACKET_ID_CHECK	FALSE
 
 /* CONFIG DEFINES */
-#define DEVICEID	"BOOTLOADER_TEST"
+#define DEVICEID	"Motor Controller"
 
 /* BOOTLOADER DEFINES */
 #define START_COMMAND_WAIT_MS	(2000)
@@ -42,6 +42,12 @@
 #define MAX_DATA_SIZE_BYTES		1024 //Max packet size will be this value plus the headers and CRC
 
 /* LED DEFINES */
+#define LED_GPIO_PORT 	(GPIOA)
+#define LED1			(GPIO_Pin_4)
+#define LED2			(GPIO_Pin_5)
+#define LED3			(0)
+#define LED4			(0)
+#define LED_TO_BLINK	(LED2)
 
 /* OTHER DEFINES (Should not be modified by user) */
 
